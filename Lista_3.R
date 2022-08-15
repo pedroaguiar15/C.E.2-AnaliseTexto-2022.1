@@ -4,3 +4,4 @@
 ### Prof. Guilherme Souza
 ### Pedro Aguiar
 ### Lucas Coelho França
+### Letícia Lino 
