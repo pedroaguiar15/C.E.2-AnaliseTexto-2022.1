@@ -5,3 +5,4 @@
 ### Pedro Aguiar
 ### Lucas Coelho França
 ### Letícia Lino 
+### Lucas Augusto Dias
