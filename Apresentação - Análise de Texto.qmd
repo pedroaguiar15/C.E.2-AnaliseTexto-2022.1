@@ -1,0 +1,37 @@
+---
+title: "Análise de Texto"
+author: "Grupo 6"
+date: "31/08/2022"
+toc: true
+theme: "AnnArbor"
+colortheme: "dolphin"
+format: beamer
+editor: visual
+---
+
+# Introdução
+
+## Mineração e análise de dados
+
+Descrever os conceitos, exemplificar, etc...
+
+## Mineração e análise de texto
+
+Descrever os conceitos, exemplificar, etc...
+
+# Mineração e análise de texto do arquivo "X" com base no livro Text Mining - Julia Silge & David Robinson
+
+## Capítulo 1
+
+Demonstrar as aplicações do capítulo 1
+
+## Capítulo 2
+
+Demonstrar as aplicações do capítulo 2\
+E por aí seguem os capítulos...
+
+## Fontes
+
+Text Mining with R - Julia Silge & David Robinson
+
+Outras fontes...
