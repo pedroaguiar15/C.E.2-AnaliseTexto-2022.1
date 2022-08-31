@@ -30,6 +30,41 @@ Demonstrar as aplicações do capítulo 1
 Demonstrar as aplicações do capítulo 2\
 E por aí seguem os capítulos...
 
+## Capítulo 3
+
+Demonstrar as aplicações do capítulo 3\
+E por aí seguem os capítulos...
+
+## Capítulo 4
+
+Demonstrar as aplicações do capítulo 4\
+E por aí seguem os capítulos...
+
+## Capítulo 5
+
+Demonstrar as aplicações do capítulo 5\
+E por aí seguem os capítulos...
+
+## Capítulo 6
+
+Demonstrar as aplicações do capítulo 6\
+E por aí seguem os capítulos...
+
+## Capítulo 7
+
+Demonstrar as aplicações do capítulo 7\
+E por aí seguem os capítulos...
+
+## Capítulo 8
+
+Demonstrar as aplicações do capítulo 8\
+E por aí seguem os capítulos...
+
+## Capítulo 9
+
+Demonstrar as aplicações do capítulo 9\
+E por aí seguem os capítulos...
+
 ## Fontes
 
 Text Mining with R - Julia Silge & David Robinson
