@@ -35,10 +35,366 @@ E por aí seguem os capítulos...
 Demonstrar as aplicações do capítulo 3\
 E por aí seguem os capítulos...
 
-## Capítulo 4
+## Relações entre palavras
 
-Demonstrar as aplicações do capítulo 4\
-E por aí seguem os capítulos...
+**Até agora...**
+
+-   Palavras como unidades individuais;
+
+-   Relações com sentimentos ou documentos.
+
+**No entanto...**
+
+-   Relações entre palavras;
+
+-   Quais palavras tendem a seguir outras imediatamente;
+
+-   Co-ocorrer dentro dos mesmos documentos.
+
+**Ou seja...** Exploraremos alguns dos métodos para calcular e visualizar relacionamentos entre palavras em seu conjunto de dados de texto.
+
+## Tokenização por n-grama
+
+**O que é um n-grama?** - Um n-grama é uma sequência contínua de *n* itens de uma determinada amostra de texto.
+
+A função ***unnest_tokens()*** também pode ser utilizada para tokenizar sequências consecutivas de palavras, ou seja, n-gramas.
+
+Podemos ver com que frequência a palavra X é seguida pela palavra Y, através um modelo de relação entre ambas.
+
+## Tokenização por n-grama
+
+Para a demosntração, uilizaremos os seguintes pacotes: 
+
+```{r echo=TRUE}
+library(dplyr)
+library(tidytext)
+library(pdftools)
+library(stringr)
+library(ggplot2)
+library(tm)
+library(wordcloud)
+library(tidyverse)
+library(ggraph)
+library(igraph)
+```
+
+E o livro "*Dom Casmurro*", de Machado de Assis, como texto para análise.
+
+```{r echo=F}
+library(tidyverse)
+# Importando Texto
+texto<-pdf_text('Dom_Casmurro.pdf')
+# Limpando Texto
+dom_casmurro1<-texto[3:337] %>%
+  strsplit("\n") %>% 
+  unlist() %>% 
+  str_squish() %>% #Retirando os múltiplos espaços
+  str_replace_all('cAPÍTULo', 'CAPÍTULO')%>%
+  str_to_lower() %>%
+  enframe(name = NULL, value = "linha")
+
+dom_casmurro <- dom_casmurro1 %>%
+  mutate(capitulo = cumsum(str_detect(linha, # descobrir onde estão os capítulos
+                                     regex("capítulo",
+                                           ignore_case = FALSE)))) %>%
+  ungroup()
+```
+
+## Tokenização por n-grama
+
+**Trasformando cada Token = n-gramas**
+
+O ***bigram***, utilizado no código abaixo, representa a definição de n = 2, ou seja, estamos examinando pares de duas palavras consecutivas. 
+```{r echo=TRUE}
+bigram_dc <- dom_casmurro %>%
+  unnest_tokens(bigram, linha, token = "ngrams", n = 2)
+```
+Para examinarmos 3 palavras consecutivas, utilizamos o ***trigram*** no lugar do ***bigram***, e mudamos o n = 3.
+```{r echo=TRUE}
+trigram_dc <- dom_casmurro %>%
+  unnest_tokens(trigram, linha, token = "ngrams", n = 3)
+```
+
+## Tokenização por n-grama
+
+O resultado fica assim para n = 2, onde cada token representa um bigrama: 
+
+```{r echo=T}
+bigram_dc
+```
+
+## Tokenização por n-grama
+
+O resultado fica assim para n = 3, onde cada token representa um trigrama: 
+
+```{r echo=T}
+trigram_dc
+```
+
+## Tokenização por n-grama
+
+***Podemos contar e filtrar n-gramas*** 
+
+```{r echo=T}
+bigram_dc %>% count(bigram, sort = T)
+```
+
+## Tokenização por n-grama
+
+Muitos dos bigramas mais comuns são pares de palavras comuns (stopwords), como "*que a*", "*que o*", e entre outros. 
+Para resolvermos esse problema, utilizaremos a função ***separate()*** e ***filter()***. Vale ressaltar que o *stopwords* é do pacote ***tm***.
+
+**Separando**
+```{r echo=T}
+library(tm)
+# Separando o Bigramas
+bigrams_separados <- bigram_dc %>%
+  separate(bigram, c("palavra1", "palavra2"), sep = " ")
+bigrams_separados
+```
+
+## Tokenização por n-grama
+**Filtrando**
+```{r echo=T}
+# Filtrando o Bigramas
+filtrando_bigramas <- bigrams_separados%>%
+  filter(!palavra1 %in% stopwords('pt')) %>%
+  filter(!palavra2 %in% stopwords('pt'))
+filtrando_bigramas
+```
+
+## Tokenização por n-grama
+**Nova contagem**
+```{r echo=T}
+# Criando uma nova contagem dos Bigramas
+novo_bigramas_dc <- filtrando_bigramas %>% 
+  count(palavra1, palavra2, sort = TRUE)
+```
+
+## Tokenização por n-grama
+
+Por fim, após removermos as stopwords, temos o seguinte resultado: 
+
+```{r echo=T} 
+novo_bigramas_dc
+```
+
+## Tokenização por n-grama
+
+Para recombinar, basta utilizar a função ***unite()***:
+
+```{r echo=T}
+bigramas_dc_unido <- filtrando_bigramas %>%
+  unite(bigram, palavra1, palavra2, sep = " ")
+bigramas_dc_unido
+```
+
+## Visualizando uma rede de bigramas com ggraph e igraph
+
+Podemos visualizar todas as relações entre as palavras simultaneamente, em vez de apenas as primeiras de cada vez.\
+**Como?**
+Podemos organizar as palavras em uma rede, ou “gráfico”.
+O pacote **igraph** tem funções que auxiliam a manipulação e a análise de redes.\
+Podemos utilizar a função ***graph_from_data_frame()*** para criar um objeto igraph a partir de dados arrumados. Essa função recebe um quadro de dados de arestas com colunas atributos **“from”**, **“to"** e ***"weight"*** (neste caso n).\ 
+
+- **from** : o nó de onde uma aresta está vindo
+- **to** : o nó para o qual uma aresta está indo
+- **weight** : Um valor numérico associado a cada aresta
+
+## Visualizando uma rede de bigramas com ggraph e igraph
+**Gerando uma rede utilizando o** ***igraph***
+```{r echo=T}
+library(igraph)
+rede_bigrama_dc <- novo_bigramas_dc %>%
+  filter(n > 5) %>%
+  graph_from_data_frame()
+rede_bigrama_dc
+```
+
+## Visualizando uma rede de bigramas com ggraph e igraph
+
+O igraph tem funções de plotagem embutidas, mas não é ele que reproduz a visualização. 
+Para isso, podemos converter um objeto igraph em um **ggraph** com a função **ggraph()**, após adicionarmos camadas a ele, o transmitiremos ao **ggplot2**.
+
+```{r echo=T}
+library(ggraph)
+set.seed(2017)
+grafico <- ggraph(rede_bigrama_dc, layout = "fr") +
+  geom_edge_link() +
+  geom_node_point() +
+  geom_node_text(aes(label = name), vjust = 1, hjust = 1)
+```
+
+## Visualizando uma rede de bigramas com ggraph
+
+```{r echo=F}
+grafico
+```
+
+## Aplicação interessante...
+
+```{r echo=F, out.width = '80%', fig.pos="center"}
+if(require(devtools) == F) install.packages('devtools'); 
+require(devtools);
+devtools::install_github("davi-moreira/txt4cs-pkg")
+require(txt4cs)
+library(txt4cs)
+# Transformando as falas do impeachment em bigramas
+data("impeachment-dilma")
+impeachment <- impeachmentDilma %>%
+  unnest_tokens(bigram, discursoPlainTxt, token = "ngrams", n = 2)
+# Separando os bigramas
+separando_bigram <- impeachment %>%
+  separate(bigram, c("word1", "word2"), sep = " ")
+# Filtrando os bigramas
+filtrando_bigram <- separando_bigram %>%
+  filter(!word1 %in% stopwords("pt")) %>%
+  filter(!word2 %in% stopwords("pt"))
+# Contado os bigramas
+bigram_counts <- filtrando_bigram %>%
+  count(word1, word2, sort = TRUE)
+# Montando uma rede
+bigram_graph <- bigram_counts %>%
+  filter(n > 15) %>%
+  graph_from_data_frame()
+set.seed(2020)
+
+a <- grid::arrow(type = "closed", length = unit(.15, "inches"))
+
+ggraph(bigram_graph, layout = "fr") +
+  geom_edge_link(aes(edge_alpha = n), show.legend = FALSE,
+                 arrow = a, end_cap = circle(.07, 'inches')) +
+  geom_node_point(color = "lightblue", size = 5) +
+  geom_node_text(aes(label = name), vjust = 1, hjust = 1) +
+  theme_void()
+```
+
+## Aplicação interessante...
+
+```{r echo=T, out.width = '30%', fig.pos="center"}
+library(wordcloud)
+bigram_unido <- filtrando_bigram %>%
+  unite(bigram, word1, word2, sep = " ")
+bigram_unido %>%
+  count(bigram, sort = T) %>%
+  with(wordcloud(bigram, n, max.words = 25, colors=brewer.pal(8, "Dark2")))
+```
+
+## Aplicação interessante...
+
+```{r echo=FALSE, out.width = '70%', fig.pos="center"}
+if(require(devtools) == F) install.packages('devtools'); 
+require(devtools);
+devtools::install_github("davi-moreira/txt4cs-pkg")
+require(txt4cs)
+library(txt4cs)
+
+# Transformando as falas do impeachment em bigramas
+data("impeachment-dilma")
+impeachment<-impeachmentDilma
+impeachmentPT <- subset(impeachment,impeachment$paritdo=='PT')
+impeachmentPMDB <- subset(impeachment, impeachment$paritdo=='PMDB')
+novo_impeachment<-full_join(impeachmentPMDB,impeachmentPT)
+
+# Imp do PT + PMDB ----
+# Transformando as falas do impeachment em bigramas
+impeachment_rede <- novo_impeachment %>%
+  unnest_tokens(bigram, discursoPlainTxt, token = "ngrams", n = 2)
+# Separando os bigramas
+imp_sep_bigram <- impeachment_rede %>%
+  separate(bigram, c("word1", "word2"), sep = " ")
+# Filtrando os bigramas
+filtrando_imp_bigram <- imp_sep_bigram %>%
+  filter(!word1 %in% stopwords("pt")) %>%
+  filter(!word2 %in% stopwords("pt"))
+# Contado os bigramas
+bigram_imp_counts <- filtrando_imp_bigram %>%
+  count(word1, word2, sort = TRUE)
+# Montando uma rede
+bigram_imp_graph <- bigram_imp_counts %>%
+  filter(n > 10) %>%
+  graph_from_data_frame()
+set.seed(2020)
+
+a <- grid::arrow(type = "closed", length = unit(.15, "inches"))
+
+imppmdbpt<-ggraph(bigram_imp_graph, layout = "fr") +
+  geom_edge_link(aes(edge_alpha = n), show.legend = FALSE,
+                 arrow = a, end_cap = circle(.07, 'inches')) +
+  geom_node_point(color = "green", size = 5) +
+  geom_node_text(aes(label = name), vjust = 1, hjust = 1) +
+  theme_void()
+
+# Imp PT ----
+# Transformando as falas do impeachment em bigramas
+impeachment_pt <- impeachmentPT %>%
+  unnest_tokens(bigram, discursoPlainTxt, token = "ngrams", n = 2)
+# Separando os bigramas
+pt_sep_bigram <- impeachment_pt %>%
+  separate(bigram, c("word1", "word2"), sep = " ")
+# Filtrando os bigramas
+filtrando_pt_bigram <- pt_sep_bigram %>%
+  filter(!word1 %in% stopwords("pt")) %>%
+  filter(!word2 %in% stopwords("pt"))
+# Contado os bigramas
+bigram_pt_counts <- filtrando_pt_bigram %>%
+  count(word1, word2, sort = TRUE)
+# Montando uma rede
+bigram_pt_graph <- bigram_pt_counts %>%
+  filter(n > 5) %>%
+  graph_from_data_frame()
+set.seed(2020)
+
+a <- grid::arrow(type = "closed", length = unit(.15, "inches"))
+
+pt<-ggraph(bigram_pt_graph, layout = "fr") +
+  geom_edge_link(aes(edge_alpha = n), show.legend = FALSE,
+                 arrow = a, end_cap = circle(.07, 'inches')) +
+  geom_node_point(color = "red", size = 5) +
+  geom_node_text(aes(label = name), vjust = 1, hjust = 1) +
+  theme_void()
+
+# Imp PMDB ----
+# Transformando as falas do impeachment em bigramas
+impeachment_pmdb <- impeachmentPMDB %>%
+  unnest_tokens(bigram, discursoPlainTxt, token = "ngrams", n = 2)
+# Separando os bigramas
+pmdb_sep_bigram <- impeachment_pmdb %>%
+  separate(bigram, c("word1", "word2"), sep = " ")
+# Filtrando os bigramas
+filtrando_pmdb_bigram <- pmdb_sep_bigram %>%
+  filter(!word1 %in% stopwords("pt")) %>%
+  filter(!word2 %in% stopwords("pt"))
+# Contado os bigramas
+bigram_pmdb_counts <- filtrando_pmdb_bigram %>%
+  count(word1, word2, sort = TRUE)
+# Montando uma rede
+bigram_pmdb_graph <- bigram_pmdb_counts %>%
+  filter(n > 5) %>%
+  graph_from_data_frame()
+set.seed(2020)
+
+a <- grid::arrow(type = "closed", length = unit(.15, "inches"))
+
+pmdb<-ggraph(bigram_pmdb_graph, layout = "fr") +
+  geom_edge_link(aes(edge_alpha = n), show.legend = FALSE,
+                 arrow = a, end_cap = circle(.07, 'inches')) +
+  geom_node_point(color = "blue", size = 5) +
+  geom_node_text(aes(label = name), vjust = 1, hjust = 1) +
+  theme_void()
+
+imppmdbpt
+```
+
+## Aplicação interessante ...
+```{r echo=FALSE, out.width = '70%', fig.pos="center"}
+pt
+```
+
+## Aplicação interessante ...
+```{r echo=FALSE, out.width = '70%', fig.pos="center"}
+pmdb
+```
 
 ## Capítulo 5
 
@@ -69,4 +425,6 @@ E por aí seguem os capítulos...
 
 Text Mining with R - Julia Silge & David Robinson
 
-Outras fontes...
+Dom Casmurro - Machado de Assis
+
+String manipulation with stringr : : CHEAT SHEET
