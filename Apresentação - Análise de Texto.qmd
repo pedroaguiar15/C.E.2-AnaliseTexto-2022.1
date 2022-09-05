@@ -1,39 +1,575 @@
 ---
-title: "Análise de Texto"
-author: "Grupo 6"
+title: "Análise de Texto - C.E.2"
+subtitle: "2022.1 - UnB"
+author: "Letícia Lino, Lucas Augusto, Lucas Franca e Pedro Aguiar"
 date: "31/08/2022"
 toc: true
 theme: "AnnArbor"
 colortheme: "dolphin"
 format: beamer
 editor: visual
+editor_options: 
+  chunk_output_type: inline
 ---
 
 # Introdução
 
-## Mineração e análise de dados
+## Mineração de dados
 
-Descrever os conceitos, exemplificar, etc...
+A mineração de dados (data mining) é um processo técnico, automático ou semiautomático, que analisa grandes quantidades de informações dispersas para que tenham sentido e sejam convertidas em conhecimento. Busca anomalias, padrões ou correlações entre milhões de registros para predizer resultados.
 
 ## Mineração e análise de texto
 
-Descrever os conceitos, exemplificar, etc...
+O termo mineração de texto (text mining) é um pouco menos conhecido, mas a ideia é bastante semelhante. A diferença reside principalmente no tipo de dado analisado. Enquanto a de dados lida mais com bancos de dados, o text mining faz essa mineração em dados não estruturados.
 
-# Mineração e análise de texto do arquivo "X" com base no livro Text Mining - Julia Silge & David Robinson
+A análise de texto combina um conjunto de técnicas de aprendizado de máquina, estatísticas e linguísticas para processar grandes volumes de texto não estruturado ou texto que não tem um formato predefinido (Word e PDF's, por exemplo), para derivar percepções e padrões. Textos extraídos de redes sociais também podem ser processados.
 
-## Capítulo 1
+A mineração de texto e a análise de texto costumam ser usadas de forma intercambiável. O termo mineração de texto é geralmente usado para derivar percepções qualitativas de texto não estruturado, enquanto a análise de texto fornece resultados quantitativos.Por exemplo, a mineração de texto pode ser usada para identificar se os clientes estão satisfeitos com um produto, analisando suas avaliações e pesquisas. A análise de texto é usada para informações mais profundas, como identificar um padrão ou tendência de um texto não estruturado (para entender um aumento negativo na experiência do cliente ou na popularidade de um produto, por exemplo).
 
-Demonstrar as aplicações do capítulo 1
+### Técnicas de análise de texto e casos de uso
 
-## Capítulo 2
+Análise de sentimentos
+Modelagem de tópicos
+Reconhecimento de entidade nomeada (NER)
+Frequência do termo - frequência inversa do documento (TF-IDF)
+Extração de evento
+-Análise de links
+-Análise geoespacial
+-Monitoramento de riscos de negócios
 
-Demonstrar as aplicações do capítulo 2\
-E por aí seguem os capítulos...
+### Etapas da análise de texto
 
-## Capítulo 3
+Coleta de dados
+Preparação de dados
+-Tokenização
+-Marcação de parte do discurso
+-Lematização e origem
+-Remoção de palavras irrelevantes
+Análise de texto
+Visualização
 
-Demonstrar as aplicações do capítulo 3\
-E por aí seguem os capítulos...
+
+## Mineração e análise de texto de dados não estruturados com R
+
+### O Formato Tidy Text
+
+Serão analisados os seguintes artigos científicos:
+
+-   "The Production of Comedy: The Joke in the Age of Social Media" Sturges, Paul
+
+-   "The Strives, Struggles, and Successes of Women Diagnosed With ADHD as Adults" Glaser, Mira; Langvik, Eva
+
+-   "Social Revolutions: Their Causes, Patterns, and Phases" Tiruneh, Gizachew
+
+------------------------------------------------------------------------
+
+Lendo os artigos em PDF no *R*.
+
+```{r, echo=TRUE}
+
+require(pdftools)
+require(stringr)
+require(dplyr)
+
+humorepiadas <- pdf_text("A piada na era da mídia social - alt.pdf") %>% 
+  str_c(collapse = "") %>% 
+  str_replace_all(pattern = "\n", replacement = " PAGINA ") %>% 
+  str_squish() %>% 
+  str_split(pattern = "PAGINA") %>% 
+  unlist
+
+
+```
+
+------------------------------------------------------------------------
+
+```{r, echo=TRUE}
+
+revsociais <- pdf_text("Revoluções Sociais - alt.pdf") %>% 
+  str_c(collapse = "") %>% 
+  str_replace_all(pattern = "\n", replacement = " PAGINA ") %>% 
+  str_squish() %>% 
+  str_split(pattern = "PAGINA") %>% 
+  unlist
+
+tdahmulheres <- pdf_text("Os esforços, lutas e sucessos de mulheres adultas com TDAH - alt.pdf")%>% 
+  str_c(collapse = "") %>% 
+  str_replace_all(pattern = "\n", replacement = " PAGINA ") %>% 
+  str_squish() %>% 
+  str_split(pattern = "PAGINA") %>% 
+  unlist
+
+```
+
+------------------------------------------------------------------------
+
+Transformando em um *dataframe* com "***tidytext***"
+
+```{r, echo=TRUE}
+
+require(tidytext)
+
+humorepiada_df <- humorepiadas %>% 
+  as.data.frame() %>% 
+  mutate(numerolinha = row_number()) %>% 
+  rename("texto" = ".") %>% 
+  unnest_tokens(word, texto) %>% 
+  as_tibble() %>% 
+  mutate(Autor = "Sturges")
+```
+
+------------------------------------------------------------------------
+
+```{r, echo=FALSE}
+humorepiada_df
+```
+
+------------------------------------------------------------------------
+
+```{r, echo=TRUE}
+revsociais_df <- revsociais %>%
+  as.data.frame() %>% 
+  mutate(numerolinha = row_number()) %>% 
+  rename("texto" = ".") %>% 
+  unnest_tokens(word, texto) %>% 
+  as_tibble() %>% 
+  mutate(Autor = "Tiruneh")
+```
+
+------------------------------------------------------------------------
+
+```{r, echo=FALSE}
+revsociais_df
+```
+
+------------------------------------------------------------------------
+
+```{r, echo=TRUE}
+tdahmulheres_df <- tdahmulheres %>% 
+  as.data.frame() %>% 
+  mutate(numerolinha = row_number()) %>% 
+  rename("texto" = ".") %>% 
+  unnest_tokens(word, texto) %>% 
+  as_tibble() %>% 
+  mutate(Autor = "Glaser and Langvik")
+```
+
+------------------------------------------------------------------------
+
+```{r, echo=FALSE}
+tdahmulheres_df
+```
+
+------------------------------------------------------------------------
+
+Removendo palavras "vazias"
+
+```{r, echo=TRUE}
+data(stop_words)
+humorepiada_df <- humorepiada_df %>% 
+  anti_join(stop_words)
+
+data(stop_words)
+revsociais_df <- revsociais_df %>% 
+  anti_join(stop_words)
+
+data(stop_words)
+tdahmulheres_df <- tdahmulheres_df %>% 
+  anti_join(stop_words)
+```
+
+------------------------------------------------------------------------
+
+Contagem - Humor & Piada
+
+```{r, echo=FALSE}
+humorepiada_df %>% count(word, sort = TRUE)
+```
+
+------------------------------------------------------------------------
+
+Contagem - Revoluções Sociais
+
+```{r, echo=FALSE}
+revsociais_df %>% count(word, sort = TRUE)
+```
+
+------------------------------------------------------------------------
+
+Contagem - TDAH em Mulheres
+
+```{r, echo=FALSE}
+tdahmulheres_df %>% count(word, sort = TRUE)
+```
+
+------------------------------------------------------------------------
+
+Visualização - Humor & Piada
+
+```{r, echo=FALSE}
+require(ggplot2)
+
+humorepiada_df %>% 
+  count(word, sort = TRUE) %>%
+  filter(n > 10) %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(n, word)) +
+  geom_col() +
+  labs(y = NULL)
+```
+
+------------------------------------------------------------------------
+
+Visualização - Revoluções Sociais
+
+```{r, echo=FALSE}
+revsociais_df %>% 
+  count(word, sort = TRUE) %>%
+  filter(n > 30) %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(n, word)) +
+  geom_col() +
+  labs(y = NULL)
+```
+
+------------------------------------------------------------------------
+
+Visualização - TDAH em Mulheres
+
+```{r, echo=FALSE}
+tdahmulheres_df %>% 
+  count(word, sort = TRUE) %>%
+  filter(n > 20) %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(n, word)) +
+  geom_col() +
+  labs(y = NULL)
+```
+
+## Análise de sentimentos
+
+### Bibliotecas para análise de sentimentos com "*textdata"*
+
+------------------------------------------------------------------------
+
+"*Afinn*"
+
+```{r, echo=TRUE}
+require(textdata)
+get_sentiments("afinn") 
+```
+
+------------------------------------------------------------------------
+
+"*Bing*"
+
+```{r, echo=FALSE}
+get_sentiments("bing") 
+```
+
+------------------------------------------------------------------------
+
+"*NRC*"
+
+```{r, echo=FALSE}
+get_sentiments("nrc")
+```
+
+------------------------------------------------------------------------
+
+"*NRC* - Revoluções Sociais - Medo"
+
+```{r, echo=TRUE}
+nrc_medo <- get_sentiments("nrc") %>% 
+  filter(sentiment == "fear")
+```
+
+------------------------------------------------------------------------
+
+```{r, echo=FALSE}
+
+revsociais_df %>%
+  inner_join(nrc_medo) %>%
+  count(word, sort = TRUE)
+```
+
+------------------------------------------------------------------------
+
+"*BING* - Humor & Piadas - Positivo"
+
+```{r, echo=FALSE}
+bing_pos <- get_sentiments("bing") %>% 
+  filter(sentiment == "positive")
+
+humorepiada_df %>% 
+  inner_join(bing_pos) %>% 
+  count(word, sort = TRUE)
+```
+
+------------------------------------------------------------------------
+
+"*AFINN* - TDAH em Mulheres - 3 negativo"
+
+```{r, echo=FALSE}
+afinn_tresneg <- get_sentiments("afinn") %>% 
+  filter(value == -3)
+
+tdahmulheres_df %>% 
+  inner_join(afinn_tresneg) %>% 
+  count(word, sort = TRUE)
+```
+
+------------------------------------------------------------------------
+
+### Palavras positivas e negativas - Quantidade
+
+------------------------------------------------------------------------
+
+Humor & Piadas
+
+```{r, echo=TRUE}
+humorepiada_sent_bing <- humorepiada_df %>% 
+  count(word, sort = TRUE) %>% 
+  inner_join(get_sentiments("bing")) #jokes é negativo; não tem comedy;
+
+humorepiada_sent_afinn <- humorepiada_df %>% 
+  count(word, sort = TRUE) %>% 
+  inner_join(get_sentiments("afinn")) # jokes é 2; comedy é 1;
+
+humorepiada_sent_nrc <- humorepiada_df %>% 
+  count(word, sort = TRUE) %>% 
+  inner_join(get_sentiments("nrc")) # jokes é negativo; não tem comedy;
+```
+
+------------------------------------------------------------------------
+
+Revoluções Sociais
+
+```{r, echo=TRUE}
+revsociais_sent_bing <- revsociais_df %>% 
+  count(word, sort = TRUE) %>% 
+  inner_join(get_sentiments("bing")) #tem revolutionary mas não tem revolution(s); popular é positivo;
+# defeat é positivo;
+
+revsociais_sent_afinn <- revsociais_df %>% 
+  count(word, sort = TRUE) %>% 
+  inner_join(get_sentiments("afinn")) # não tem revolution - political - social; 
+#talvez algumas palavras não tem classificação?
+
+revsociais_sent_nrc <- revsociais_df %>% 
+  count(word, sort = TRUE) %>% 
+  inner_join(get_sentiments("nrc")) #revolution tem vários sentimentos # military = fear
+#defeat é negativo
+```
+
+------------------------------------------------------------------------
+
+TDAH em Mulheres
+
+```{r, echo=TRUE}
+tdahmulheres_sent_bing <- tdahmulheres_df %>% 
+  count(word, sort = TRUE) %>% 
+  inner_join(get_sentiments("bing")) #symptoms é negativo; lack é negativo; 
+#a maioria das palavras mais frequentes não aparecem também
+
+tdahmulheres_sent_afinn <- tdahmulheres_df %>% 
+  count(word, sort = TRUE) %>% 
+  inner_join(get_sentiments("afinn")) #as 10 palavras mais frequentes não aparecem (neutralidade)?;
+#positive é 2 e negative é -2; 
+
+tdahmulheres_sent_nrc <- tdahmulheres_df %>% 
+  count(word, sort = TRUE) %>% 
+  inner_join(get_sentiments("nrc")) #multisentimentalidade; esteem = alegria, positivo e tristeza;
+```
+
+------------------------------------------------------------------------
+
+### Visualização
+
+*Bing* - Humor & Piadas
+
+------------------------------------------------------------------------
+
+```{r, echo=FALSE}
+humorepiadas_maisfreqs_neg <- filter(humorepiada_sent_bing, `sentiment` == "negative")
+
+ggplot(humorepiadas_maisfreqs_neg[1:20,], aes(x = reorder(word, n), n)) +
+  geom_col() +
+  facet_wrap(~sentiment) +
+  labs(x = "Palavra", y = "Quantidade", title = "Humor & Piadas", 
+       subtitle = "BING - NEGATIVE") + 
+  coord_flip()
+```
+
+------------------------------------------------------------------------
+
+```{r, echo=FALSE}
+humorepiadas_maisfreqs_pos <- filter(humorepiada_sent_bing, `sentiment` == "positive")
+
+ggplot(humorepiadas_maisfreqs_pos[1:20,], aes(x = reorder(word, n), n)) +
+  geom_col() +
+  facet_wrap(~sentiment) +
+  labs(x = "Palavra", y = "Quantidade", title = "Humor & Piadas", 
+       subtitle = "BING - POSITIVE") + 
+  coord_flip()
+
+```
+
+------------------------------------------------------------------------
+
+```{r, echo=FALSE}
+ggplot(humorepiada_sent_bing[1:20,], aes(x = reorder(word, n), n)) +
+  geom_col(aes(fill = sentiment)) +
+  labs(x = "Palavra", y = "Quantidade", title = "Humor & Piadas", 
+       subtitle = "BING") +
+  coord_flip()
+```
+
+------------------------------------------------------------------------
+
+*BING* - Revoluções Sociais
+
+------------------------------------------------------------------------
+
+```{r, echo=FALSE}
+revsociais_maisfreqs_neg <- filter(revsociais_sent_bing, `sentiment` == "negative")
+
+ggplot(revsociais_maisfreqs_neg[1:20,], aes(x = reorder(word, n), n)) +
+  geom_col() +
+  facet_wrap(~sentiment) +
+  labs(x = "Palavra", y = "Quantidade", title = "Revoluções Sociais", 
+       subtitle = "BING - NEGATIVE") + 
+  coord_flip()
+```
+
+------------------------------------------------------------------------
+
+```{r, echo=FALSE}
+revsociais_maisfreqs_pos <- filter(revsociais_sent_bing, `sentiment` == "positive")
+
+ggplot(revsociais_maisfreqs_pos[1:20,], aes(x = reorder(word, n), n)) +
+  geom_col() +
+  facet_wrap(~sentiment) +
+  labs(x = "Palavra", y = "Quantidade", title = "Revoluções Sociais", 
+       subtitle = "BING - POSITIVE") + 
+  coord_flip()
+```
+
+------------------------------------------------------------------------
+
+```{r, echo=FALSE}
+ggplot(revsociais_sent_bing[1:20,], aes(x = reorder(word, n), n)) +
+  geom_col(aes(fill = sentiment)) +
+  labs(x = "Palavra", y = "Quantidade", title = "Revoluções Sociais", 
+       subtitle = "BING") +
+  coord_flip()
+```
+
+------------------------------------------------------------------------
+
+*BING* - TDAH em Mulheres
+
+------------------------------------------------------------------------
+
+```{r, echo=FALSE}
+tdahmulheres_maisfreqs_neg <- filter(tdahmulheres_sent_bing, `sentiment` == "negative")
+
+ggplot(tdahmulheres_maisfreqs_neg[1:20,], aes(x = reorder(word, n), n)) +
+  geom_col() +
+  facet_wrap(~sentiment) +
+  labs(x = "Palavra", y = "Quantidade", title = "TDAH & Mulheres", 
+       subtitle = "BING - Negative") + 
+  coord_flip()
+```
+
+------------------------------------------------------------------------
+
+```{r, echo=FALSE}
+tdahmulheres_maisfreqs_pos <- filter(tdahmulheres_sent_bing, `sentiment` == "positive")
+
+ggplot(tdahmulheres_maisfreqs_pos[1:20,], aes(x = reorder(word, n), n)) +
+  geom_col() +
+  facet_wrap(~sentiment) +
+  labs(x = "Palavra", y = "Quantidade", title = "Humor & Piadas", 
+       subtitle = "BING - POSITIVE") + 
+  coord_flip()
+```
+
+------------------------------------------------------------------------
+
+```{r}
+ggplot(tdahmulheres_sent_bing[1:20,], aes(x = reorder(word, n), n)) +
+  geom_col(aes(fill = sentiment)) +
+  labs(x = "Palavra", y = "Quantidade", title = "Humor & Piadas", 
+       subtitle = "BING") +
+  coord_flip()
+```
+
+------------------------------------------------------------------------
+
+### Nuvens de palavras
+
+*Wordcloud* - Humor & Piadas
+
+```{r, echo=FALSE}
+require(wordcloud)
+require(reshape2)
+humorepiada_df %>% 
+  anti_join(stop_words) %>% 
+  count(word) %>% 
+  with(wordcloud(word, n, max.words = 100))
+```
+
+------------------------------------------------------------------------
+
+*Wordcloud* - Revoluções Sociais
+
+```{r, echo=FALSE}
+revsociais_df %>% 
+  anti_join(stop_words) %>% 
+  count(word) %>% 
+  with(wordcloud(word, n, max.words = 100))
+
+```
+
+------------------------------------------------------------------------
+
+*Wordcloud* - TDAH em Mulheres
+
+```{r, echo=FALSE}
+tdahmulheres_df %>% 
+  anti_join(stop_words) %>% 
+  count(word) %>% 
+  with(wordcloud(word, n, max.words = 100))
+
+```
+
+------------------------------------------------------------------------
+
+```{r, echo=FALSE}
+humorepiada_df %>% 
+  inner_join(get_sentiments("bing")) %>%
+  count(word, sentiment, sort = TRUE) %>%
+  acast(word ~ sentiment, value.var = "n", fill = 0) %>%
+  comparison.cloud(colors = c("red", "blue"),
+                   max.words = 100)
+```
+
+
+
+
+
+
+
+FIM PARTE PEDRO !!! -------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
 
 ## Relações entre palavras
 
@@ -423,7 +959,11 @@ E por aí seguem os capítulos...
 
 ## Fontes
 
-Text Mining with R - Julia Silge & David Robinson
+-   "Text Mining with R" - Julia Silge & David Robinson
+
+    -   [tidytextmining.com](https://www.tidytextmining.com/index.html)
+
+-   <https://www.tibco.com/pt-br/reference-center/what-is-text-analytics>
 
 Dom Casmurro - Machado de Assis
 
