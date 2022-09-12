@@ -1,0 +1,76 @@
+---
+title: "Rtweet - Código WordCloud2"
+subtitle: "Análise de Texto - 2022.1"
+author: "Letícia Lino, Lucas Augusto, Lucas Coelho e Pedro Aguiar"
+date: "12 de setembro de 2022"
+output:
+  slidy_presentation: default
+  ioslides_presentation: default
+---
+
+```{r echo=F, warning=FALSE,message = FALSE}
+#Carregando "df_tweets"
+library(rtweet)
+library(dplyr)
+tweets <- search_tweets("eleições 2022", 
+                        n = 1800,
+                        include_rts = FALSE)
+```
+
+```{r echo=F,warning=FALSE,message = FALSE}
+texto = tweets$full_text
+```
+
+```{r echo=F, warning=FALSE,message = FALSE}
+library(tm)
+texto <- texto %>%
+  (removePunctuation) %>%
+  (removeNumbers) %>%
+  (stripWhitespace) 
+```
+
+```{r echo=F, warning=FALSE,message = FALSE}
+library(tm)
+dados <- Corpus(VectorSource(texto))
+dados <- dados %>%
+  tm_map(content_transformer(tolower)) 
+
+dados <- dados %>%
+  tm_map(removeWords, 
+          stopwords("pt")) #stopword
+dados <- dados %>% 
+  tm_map(stemDocument) #juntando termos 
+
+```
+
+```{r echo=F, warning=FALSE,message = FALSE}
+#removendo "http"
+URL <- function(x) gsub("http[[:alnum:]]*","",x)
+dados <- tm_map(dados, URL)
+
+```
+
+```{r echo=F, warning=FALSE,message = FALSE}
+amatrix<- TermDocumentMatrix(dados) 
+amatrix<-removeSparseTerms(amatrix, 0.98)
+matrix <-as.matrix(amatrix)
+matrix<-sort(rowSums(matrix), decreasing = TRUE)
+```
+
+```{r echo=F, warning=FALSE,message = FALSE}
+df_tweets<-data.frame(Palavras = names(matrix),
+                    Frequencia = matrix) 
+```
+
+# WordCloud2
+> - Pode ser necessário que o resultado do seguinte código seja aberto no browser e não no RStudio Viewer.
+```{r warning=FALSE}
+library(wordcloud2)
+figura <- "figura_wordcloud2.png"
+wordcloud2(df_tweets[1:50, ],
+           size = 2,
+           color = "skyblue", 
+           figPath = figura,
+           backgroundColor = "black")
+```
+
