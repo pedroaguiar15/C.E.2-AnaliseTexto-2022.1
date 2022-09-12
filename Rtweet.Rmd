@@ -1,0 +1,509 @@
+---
+title: "Rtweet"
+subtitle: "Análise de Texto - 2022.1"
+author: "Letícia Lino, Lucas Augusto, Lucas Coelho e Pedro Aguiar"
+date: "12 de setembro de 2022"
+output:
+  beamer_presentation: default
+  slidy_presentation: default
+toc: yes
+theme: AnnArbor
+colortheme: dolphin
+format: beamer
+---
+
+# Analisando textos do Twitter
+
+## O pacote Rtweet
+
+### Primeiro acesso
+
+A API do twitter nos disponibilizará os dados que precisamos, mas antes, é necessário obtermos alguns "credenciamentos" para acessá-la:
+
+-   Consumer Key
+-   Consumer Secret
+-   Access Token
+-   Access Secret
+
+Para isso, basta acessar esse link <https://developer.twitter.com/en/apps> e seguir os passos a partir de "Create an App". Após a primeira solicitação de qualquer função do pacote, o R cobrará suas credenciais.
+
+------------------------------------------------------------------------
+
+# O Pacote
+
+- Com o pacote rtweet, podemos localizar os últimos tweets feitos com uma palavra de interesse, por default, a função busca os últimos 100 tweets, mas esses parâmetros podem ser alterados. 
+
+- *Atenção!* - O pacote "rtweet" *carrega até 18000 tweets a cada 15 minutos*, para cada usuário, entretanto, se for de interesse o parâmetro "retryonratelimit = TRUE" pode ser utlizado para que mais tweets sejam carregados. O R contará o tempo para que a próxima consulta possa ser feita!
+
+----------------------------------------
+
+*Ressalva!*
+
+-   Utilizando rtweet, conseguimos trabalhar apenas com os dados fornecidos nos últimos 6 a 9 dias. Não poderíamos, por exemplo, estudar eleições passadas.
+
+------------------------------------------------------------------------
+
+# Get\_...()
+
+## Para usuários
+
+> -   get_favorites
+> -   get_followers
+> -   get_friends
+> -   get_mentions
+> -   get_retweets
+> -   get_timeline
+> -   get_trends
+
+------------------------------------------------------------------------
+
+# Lookup!
+
+> -   lookup_coords
+> -   lookup_friendships
+> -   lookup_users
+
+# Ts
+
+> -   ts_data
+> -   ts_plot
+
+*Atenção!* - ts_data converte dados do twitter, em uma espécie de série temporal, essa função pode, por exemplo, juntar as informações temporais (get_timeline) de dois usuários, ou seja, retorna a frequência de tweets em um intervalo de tempo específico. 
+
+-   ts_plot monta o "gráfico temporal".
+
+-----------------------------------------------------------------
+
+# Algumas funções do Rtweet
+
+## Procurando termos. 
+> - search_tweets
+
+```{r warning=FALSE,message = FALSE}
+library(rtweet)
+library(dplyr)
+tweets <- search_tweets("eleições 2022", 
+                        n = 1800,
+                        include_rts = FALSE)
+```
+
+## Também podemos procurar por hastags!
+
+```{r warning=FALSE, message = FALSE, results='asis'}
+tweetseleiçoes <- search_tweets("#eleições2022",
+                                type = "popular",
+                                n=3)
+```
+
+-----------------------------------------------------
+
+# Da onde vieram esses tweets?
+
+```{r, echo=FALSE, warning=FALSE,message = FALSE}
+tweets_coord <- lat_lng(tweets)
+```
+
+```{r echo=FALSE, warning=FALSE,message = FALSE, results='hide'}
+library(maps)
+par(mar = c(0,0,0,0))
+mapa <- map("world", "brazil",  
+            fill=T,
+            col="grey90",
+            lwd = 0.50)
+
+map.cities(country = "Brazil",
+           minpop = 1000000, #mínimo da população
+           pch=19, 
+           cex=0.5)
+with(tweets_coord,
+     points(lng, lat, 
+            pch = 20, #o símbolo
+            cex = 0.75, #tamanho do símbolo
+            col = rgb(1, 0.6, .7, .8))) # função mais sofisticada para escolha da cor
+```
+
+
+-------------------------------------------------------------
+
+# Para observações 
+
+## Coletando, limpando e analisando tweets 
+
+```{r warning=FALSE,message = FALSE}
+texto = tweets$full_text
+```
+
+## Tm
+```{r warning=FALSE,message = FALSE}
+library(tm)
+texto <- texto %>%
+  (removePunctuation) %>%
+  (removeNumbers) %>%
+  (stripWhitespace) 
+```
+
+------------------------------------------------------
+
+# Criando o Corpus
+
+- Corpus = texto + metadados
+
+```{r warning=FALSE,message = FALSE}
+library(tm)
+dados <- Corpus(VectorSource(texto))
+dados <- dados %>%
+  tm_map(content_transformer(tolower)) 
+
+dados <- dados %>%
+  tm_map(removeWords, 
+          stopwords("pt")) #stopword
+dados <- dados %>% 
+  tm_map(stemDocument) #juntando termos 
+
+```
+
+----------------------------------------
+
+# removendo https
+
+```{r warning=FALSE,message = FALSE}
+#removendo "http"
+URL <- function(x) gsub("http[[:alnum:]]*","",x)
+dados <- tm_map(dados, URL)
+
+```
+
+---------------------------------------------
+
+# Criando uma matrix com a frequência de palavras
+
+```{r warning=FALSE,message = FALSE}
+amatrix<- TermDocumentMatrix(dados) 
+amatrix<-removeSparseTerms(amatrix, 0.98)
+matrix <-as.matrix(amatrix)
+matrix<-sort(rowSums(matrix), decreasing = TRUE)
+```
+
+## Criando um Data Frame para os gráficos que serão plotados,
+
+```{r warning=FALSE,message = FALSE}
+df_tweets<-data.frame(Palavras = names(matrix),
+                    Frequencia = matrix) 
+```
+
+---------------------------------------------------------
+
+# Frequência de Palavras
+
+```{r echo=FALSE, warning=FALSE,message = FALSE}
+library(ggplot2)
+library(dplyr)
+ggplot(subset(df_tweets,
+              Frequencia > 100),
+       eleicoes=eleições) +
+  aes(y = Palavras, x = Frequencia, fill = Palavras) +
+  geom_bar(stat = "identity") +
+    labs(title ="Palavras mais citadas nos últimos dias",
+        subtitle= "A partir de tweets que mencionavam eleições 2022",
+        caption="Fonte: dados extraídos através da API do Twitter")
+```
+
+
+----------------------------------------------------------------------
+
+# "findFreqTerms" do pacote tm
+
+- Podemos também vizualizar as palavras mais utilizando essa nova função.
+
+```{r warning=FALSE,message = FALSE, results='asis'}
+freq <- findFreqTerms(amatrix, 
+                      lowfreq = 95) 
+freq
+```
+
+------------------------------------------------------
+
+# Achando Associação entre termos
+
+```{r warning=FALSE, message=FALSE}
+associacao<-findAssocs(amatrix,
+           "voto",
+           0.1)
+```
+
+| Termos  | Associação |
+|---------|------------|
+| Pode    | 0.44       |
+| Ciro    | 0.26       | 
+| Lula    | 0.23       | 
+| Eleição | 0.23       |
+| Primeiro| 0.22       |
+| Turno   | 0.22       |
+
+----------------------------------------------------------------------
+
+# Nuvem de Palavras
+
+> - Wordcloud
+```{r echo = FALSE, warning=FALSE, message = FALSE}
+library(wordcloud)
+library(wordcloud2)
+
+nuvem<-wordcloud(df_tweets$Palavra,
+          df_tweets$Frequencia,
+          min.freq = 50,
+          random.order=FALSE,
+           color = "skyblue")
+```
+
+------------------------------------------------------------------------
+
+
+> - Wordcloud2
+
+  O Wordcloud2 é um pacote que nos permitirá plotar uma nuvem de palavras um pouco mais sofisticada. 
+
+- interface HTML 
+- letterCloud 
+- figPath
+- alteração de cor, grafite, vetores de cores, rotação, forma da nuvem e outros. 
+
+
+------------------------------------------------------------------------
+
+# Funções "get_timeline + ts_plot
+
+-   get_timeline(c("usuario1","usuario2","usuario3"))
+-   ts_plot 
+
+```{r warning=FALSE,message = FALSE}
+library(dplyr)
+jair <- get_timeline("jairbolsonaro", 
+                     n = 100)
+lula <- get_timeline("LulaOficial", 
+                     n = 100,)
+ciro <- get_timeline("cirogomes", 
+                     n = 100,)
+```
+
+--------------------------------------
+
+```{r warning=FALSE,message = FALSE}
+jair <- cbind(jair, users_data(jair)
+              [, c("name", "screen_name")])
+lula <- cbind(lula, users_data(lula)
+              [, c("name", "screen_name")])
+ciro <- cbind(ciro, users_data(ciro)
+              [, c("name", "screen_name")])
+linhatempo <- rbind(jair, lula, ciro)
+linhatempo <- linhatempo %>%
+  mutate(Candidato = name)
+```
+
+------------------------------------------------------------------------
+
+# O quanto os candidatos 2022 tweetaram nos últimos dias?
+
+## Ts_plot
+
+```{r warning=FALSE,message = FALSE,eval=FALSE}
+library(ggplot2)
+ts_plot(data = linhatempo,
+          by = "2 days") +
+  theme_classic() +
+  labs(
+    x = NULL, 
+    y = NULL,
+    title = "Tweets feitos pelos Candidatos",
+    subtitle = "Tweets a cada 2 dias.",
+    caption = "Fonte: Dados coletados pela API do Twitter")
+```
+
+------------------------------------------------------------------------
+
+```{r echo=FALSE, warning=FALSE,message = FALSE}
+library(ggplot2)
+ts_plot(data = linhatempo,
+          by = "2 days") +
+  theme_classic() +
+  labs(
+    x = NULL, 
+    y = NULL,
+    title = "Tweets feitos pelos Candidatos 2022 nos últimos dias ",
+    subtitle = "Tweets a cada 2 dias.",
+    caption = "Fonte: Dados coletados pela API do Twitter")
+
+```
+
+------------------------------------------------------
+
+# Palavras Citadas
+
+```{r echo=FALSE, warning=FALSE,message = FALSE, fig.width=4, fig.height=3}
+library(tidytext)
+library(stringr)
+library(scales)
+library(rtweet)
+library(tm)
+
+#Os códigos a seguir seguem a aplicação do livro "Text Mining with R!", por Julia Silge e David Robinson.
+
+
+#nessa análise, estaremos usando as "stopwords" em português!
+
+stop_words=stopwords("pt")
+remove_reg <- "&amp;|&lt;|&gt;"
+tidy_tweets <- linhatempo %>% 
+  filter(!str_detect(full_text, "^RT")) %>%
+  mutate(text = str_remove_all(full_text, remove_reg)) %>%
+  unnest_tokens(word, text, token = "tweets") %>%
+  filter(!word %in% stop_words,
+         !word %in% str_remove_all(stop_words, "'"),
+         str_detect(word, "[a-z]"))
+
+#Frequência para cada candidato
+frequencia <- tidy_tweets %>% 
+  count(screen_name, word, sort = TRUE) %>% 
+  left_join(tidy_tweets %>% 
+              count(screen_name, name = "total")) %>%
+  mutate(freq = n/total)
+
+#Apenas para vizualização
+tidy_tweets <- tidy_tweets %>%
+  select(c("created_at","full_text","name", "word"))
+
+#Organizando porcentagem, termo e candidato
+library(tidyr)
+frequencia2 <- frequencia %>% 
+  select(screen_name, word, freq) %>% 
+  pivot_wider(names_from = screen_name, 
+              values_from = freq) %>%
+  arrange(cirogomes, LulaOficial)
+
+#plotando o grafico
+ggplot(frequencia2, aes(cirogomes, LulaOficial)) +
+  geom_jitter(alpha = 0.2, size = 0.5, 
+              width=0.25, height=0.25) +
+  geom_text(aes(label = word), check_overlap = TRUE, vjust = 1.5) +
+  scale_x_log10(labels = percent_format()) +
+  scale_y_log10(labels = percent_format()) +
+  geom_abline(color = "blue")
+```
+
+------------------------------------
+
+# Likes e RTs!
+
+```{r echo=FALSE, warning=FALSE,message = FALSE, fig.width=5, fig.height=3}
+library(ggplot2)
+linhatempo %>%
+  ggplot(aes(x = log(retweet_count),
+  y = log(favorite_count),
+  colour = Candidato)) +
+  geom_point( ) +
+  labs(aes(title="Likes/Rts por candidato",
+  caption="Dados retirados do Twitter com o pacote rtweet"))
+```
+
+---------------------------------------------------
+
+# Outra Análise:
+
+## Média de RTs
+```{r warning=FALSE,message = FALSE}
+MediaRT <- linhatempo %>%
+  group_by(Candidato) %>%
+  summarise(mean(retweet_count))
+MediaRT
+
+```
+
+---------------------------------------
+
+## Média de favoritados
+
+```{r warning=FALSE,message = FALSE}
+MediaFav<-linhatempo %>%
+  group_by(Candidato) %>%
+  summarise(mean(favorite_count))
+MediaFav
+```
+
+
+------------------------------------------------
+
+# API GOOGLE MAPS
+
+-   Permite a utilização gratuita de funções do Google Maps
+-   Chave de autenticação.
+-   25.000 requisições gratuitas.
+
+-------------------------------------------
+
+## Tweets que sairam do Brasil.
+
+```{r warning=FALSE,message = FALSE}
+library("rtweet")
+nobrasil <- search_tweets("#rockinrio",
+                          geocode = lookup_coords("brazil"),
+                          type = "popular")
+
+```
+
+## Tweets em português, enviados dos Estados Unidos
+
+```{r warning=FALSE,message = FALSE}
+usa<-search_tweets("#rockinrio",
+                   lang="pt-BR",
+                   type = "recent",
+              geocode = lookup_coords("usa"), 
+              n = 3)
+```
+
+
+--------------------------------------------
+
+# E as trends?
+
+```{r warning=FALSE,message = FALSE, results='asis'}
+viral <- get_trends("salvador")
+momentos<-viral$trend
+head(momentos,
+     n=5)
+```
+
+------------------------------------------------------------------------
+
+# Obrigado! 
+
+
+Todos os códigos, arquivos, imagens e outras informações úteis apresentadas hoje estão no nosso git! 
+
+
+\
+\
+\
+
+- <https://github.com/pedroaguiar15/C.E.2-AnaliseTexto-2022.1>  
+
+
+
+\
+\
+\
+\
+
+Letícia Lino, Lucas Augusto, Lucas Coelho e Pedro Aguiar
+
+-----------------------------------------------
+
+Bibliografia
+
+-   <https://rdocumentation.org/packages/rtweet/versions/0.7.0> 
+
+-   <https://www.lume.ufrgs.br/bitstream/handle/10183/149102/001004730.pdf?sequence=1> 
+
+-   <https://cran.r-project.org/web/packages/rtweet/rtweet.pdf> -
+
+-   <https://www.gbailey.uk/twitter_workshop/pt2_collection.html>
+
