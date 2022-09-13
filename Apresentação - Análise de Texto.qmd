@@ -16,42 +16,63 @@ editor_options:
 
 ## Mineração de dados
 
-A mineração de dados (data mining) é um processo técnico, automático ou semiautomático, que analisa grandes quantidades de informações dispersas para que tenham sentido e sejam convertidas em conhecimento. Busca anomalias, padrões ou correlações entre milhões de registros para predizer resultados.
+A mineração de dados (*data mining*) é um processo técnico, automático ou semiautomático, que analisa grandes quantidades de informações dispersas para que tenham sentido e sejam convertidas em conhecimento. Busca anomalias, padrões ou correlações entre milhões de registros para predizer resultados.
 
 ## Mineração e análise de texto
 
-O termo mineração de texto (text mining) é um pouco menos conhecido, mas a ideia é bastante semelhante. A diferença reside principalmente no tipo de dado analisado. Enquanto a de dados lida mais com bancos de dados, o text mining faz essa mineração em dados não estruturados.
+O termo mineração de texto (*text mining)* é um pouco menos conhecido, mas a ideia é bastante semelhante. A diferença reside principalmente no tipo de dado analisado. Enquanto a de dados lida mais com bancos de dados, o *text mining* faz essa mineração em dados não estruturados.
 
 A análise de texto combina um conjunto de técnicas de aprendizado de máquina, estatísticas e linguísticas para processar grandes volumes de texto não estruturado ou texto que não tem um formato predefinido (Word e PDF's, por exemplo), para derivar percepções e padrões. Textos extraídos de redes sociais também podem ser processados.
 
+------------------------------------------------------------------------
+
 A mineração de texto e a análise de texto costumam ser usadas de forma intercambiável. O termo mineração de texto é geralmente usado para derivar percepções qualitativas de texto não estruturado, enquanto a análise de texto fornece resultados quantitativos.Por exemplo, a mineração de texto pode ser usada para identificar se os clientes estão satisfeitos com um produto, analisando suas avaliações e pesquisas. A análise de texto é usada para informações mais profundas, como identificar um padrão ou tendência de um texto não estruturado (para entender um aumento negativo na experiência do cliente ou na popularidade de um produto, por exemplo).
+
+------------------------------------------------------------------------
 
 ### Técnicas de análise de texto e casos de uso
 
-Análise de sentimentos
-Modelagem de tópicos
-Reconhecimento de entidade nomeada (NER)
-Frequência do termo - frequência inversa do documento (TF-IDF)
-Extração de evento
--Análise de links
--Análise geoespacial
--Monitoramento de riscos de negócios
+-   Análise de sentimentos
+
+-   Modelagem de tópicos
+
+-   Reconhecimento de entidade nomeada (NER)
+
+-   Frequência do termo - frequência inversa do documento (TF-IDF)
+
+-   Extração de evento
+
+    -   Análise de links
+
+    -   Análise geoespacial
+
+    -   Monitoramento de riscos de negócios
+
+------------------------------------------------------------------------
 
 ### Etapas da análise de texto
 
-Coleta de dados
-Preparação de dados
--Tokenização
--Marcação de parte do discurso
--Lematização e origem
--Remoção de palavras irrelevantes
-Análise de texto
-Visualização
+1.  Coleta de dados
 
+2.  Preparação de dados
 
-## Mineração e análise de texto de dados não estruturados com R
+    1.  Tokenização
 
-### O Formato Tidy Text
+    2.  Marcação de parte do discurso
+
+    3.  Lematização e origem
+
+    4.  Remoção de palavras irrelevantes
+
+3.  Análise de texto
+
+4.  Visualização\
+    \
+    \
+
+# Mineração e análise de texto de dados não estruturados com *R*
+
+## O Formato *Tidy Text*
 
 Serão analisados os seguintes artigos científicos:
 
@@ -555,14 +576,178 @@ humorepiada_df %>%
                    max.words = 100)
 ```
 
+------------------------------------------------------------------------
 
 
 
 
 
 
-FIM PARTE PEDRO !!! -------------------------------------------------------------------------------------------------------------------------------------------------
+###FIM PARTE PEDRO !!! -----------------------------------------------------------------------------------------------------------------------------------------------
 
+
+
+
+
+
+## Ponderação de termos
+
+-   Parte da ideia de que, dentro de um contexto, alguns termos podem ser mais importantes do que outros para descrever o conteúdo dos documentos;
+
+-   Por exemplo, um termo que apareça em todos os documentos da base não tem muita utilidade para indexação. Por outro lado, um termo raro pode ter grande importância;
+
+-   Por sua vez, um termo que apareça muitas vezes em um documento específico pode, em muitos casos, dar uma ideia melhor sobre o conteúdo desse documento do que um termo que apareça poucas vezes.
+
+------------------------------------------------------------------------
+
+## Document-term matrix (DTM)
+
+-   Todos os termos de um conjunto de documentos são colocados em uma DTM,
+
+-   Uma DTM é uma matriz matemática que descreve a frequência dos termos que ocorrem em uma coleção de documentos.
+
+-   Linhas: Termos
+
+-   Colunas: Documentos
+
+-   Esquema de ponderação de termos: Term Frequency, Binary Weight, TF-IDF, etc.
+
+------------------------------------------------------------------------
+
+### Um exemplo de DTM
+
+-   Doc1: I like R
+-   Doc2: I like Python
+
+| Termos | Doc1 | Doc2 |
+|--------|------|------|
+| I      | 1    | 1    |
+| Like   | 1    | 1    |
+| Python | 0    | 1    |
+| R      | 1    | 0    |
+
+------------------------------------------------------------------------
+
+### No R: Criando uma DTM
+
+-   Podemos usar o pacote `tm` que contém as seguintes funções:
+
+-   A função `VectorSource()` interpreta os elementos de um vetor $x$ como documentos;
+
+-   A função `Corpus()` cria um objeto do tipo corpus;
+
+-   A função `TermDocumentMatrix()` recebe um objeto do tipo corpus como argumento, e cria uma DTM;
+
+-   A função `Inspect()` apresenta informações detalhadas sobre uma DTM;
+
+------------------------------------------------------------------------
+
+-   Exemplo:
+
+```{r, echo = T}
+library(magrittr)
+library(tm) ## package for text mining
+```
+
+------------------------------------------------------------------------
+
+```{r, echo=FALSE}
+a <- c("I like R", "I like Python")
+## build corpus
+b <- a %>% tm::VectorSource() %>% tm::Corpus()
+## build term document matrix (TDM)
+m <- b %>% tm::TermDocumentMatrix(control=list(wordLengths=c(1, Inf)))
+m %>% tm::inspect()
+```
+
+------------------------------------------------------------------------
+
+## No R: Diferentes esquemas de Ponderação (binary weighting)
+
+-   Simples esquema de ponderação por binários
+
+-   Se o termo está no documento é atribuído o valor de $1$, se ele não está no documento é atribuído o valor de $0$.
+
+------------------------------------------------------------------------
+
+-   Exemplo:
+
+```{r, echo = T}
+## various term weighting schemes
+m %>% weightBin() %>% inspect() ## binary weighting
+```
+
+------------------------------------------------------------------------
+
+-   Se baseia na premissa de que quanto mais vezes um termo aparece em um documento, maior sua capacidade de descrever seu conteúdo.
+
+-   Assim, o peso do termo no documento é proporcional a sua frequência.
+
+------------------------------------------------------------------------
+
+-   Exemplo:
+
+```{r, echo = T}
+m %>% weightTf() %>% inspect() ## term frequency
+```
+
+------------------------------------------------------------------------
+
+## No R: Diferentes esquemas de Ponderação (TF-IDF)
+
+-   TF-IDF é uma medida estatística que tem o intuito de indicar a importância de uma palavra de um documento em relação a uma coleção de documentos.
+
+-   Term Frequency (TF): é o número de ocorrências do termo $t_i$ no documento $d_j$
+
+-   Inverse Document Frequency (IDF) é um peso atribuído para cada termo para medir seu grau de importância em relação à uma coleção de documentos de texto.
+
+------------------------------------------------------------------------
+
+-   O IDF de um termo $t$ é definido como:
+
+$$
+idf(term) = ln(\frac{n_{documents}}{n_{documents\: containing \:term}}) 
+$$
+
+$$
+tfidf(term) = tf_{ij} \: . \: idf_{term}
+$$
+
+------------------------------------------------------------------------
+
+-   O IDF reduz o peso de termos que ocorrem com frequência em documentos e aumenta o peso de termos que ocorrem raramente.
+
+-   Busca expressar a importância de um termo dentro da base de documentos segundo sua raridade;
+
+-   TD-IDF é o esquema de ponderação mais popular na prática;
+
+------------------------------------------------------------------------
+
+-   No R, podemos usar a função `weightTfIdf()`:
+
+```{r, echo = T}
+m %>% weightTfIdf(normalize=F) %>% inspect() 
+```
+
+------------------------------------------------------------------------
+
+### No R: Diferentes esquemas de Ponderação (normalized TF-IDF)
+
+-   A normalização é usada para evitar viés na frequência de termos em documentos mais curtos ou mais longos.
+
+```{r, echo = T}
+m %>% weightTfIdf(normalize=T) %>% inspect() 
+```
+
+------------------------------------------------------------------------
+
+
+
+
+
+
+
+###FIM PARTE LUCAS COELHO --------------------------------------------------------------------------------------------------------------------------------------------
 
 
 
@@ -932,32 +1117,18 @@ pt
 pmdb
 ```
 
-## Capítulo 5
 
-Demonstrar as aplicações do capítulo 5\
-E por aí seguem os capítulos...
 
-## Capítulo 6
 
-Demonstrar as aplicações do capítulo 6\
-E por aí seguem os capítulos...
 
-## Capítulo 7
 
-Demonstrar as aplicações do capítulo 7\
-E por aí seguem os capítulos...
+###FIM PARTE LUCAS AUGUSTO -------------------------------------------------------------------------------------------------------------------------------------------
 
-## Capítulo 8
 
-Demonstrar as aplicações do capítulo 8\
-E por aí seguem os capítulos...
 
-## Capítulo 9
 
-Demonstrar as aplicações do capítulo 9\
-E por aí seguem os capítulos...
 
-## Fontes
+
 
 -   "Text Mining with R" - Julia Silge & David Robinson
 
